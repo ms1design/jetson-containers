@@ -151,7 +151,7 @@ def handle_text_request(url) -> str | None:
             print("Failed to fetch version information. Status code:", response.status_code)
             return None
     except Exception as e:
-        print("An error occurred:", e)
+        print(f"An error occurred: {e}")
         return None
     
 
