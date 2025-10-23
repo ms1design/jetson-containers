@@ -13,13 +13,13 @@ PYBIND_PKG_CONFIG="/usr/share/pkgconfig/pybind11.pc"
 PYBIND_SHARE_CMAKE="/usr/lib/cmake/pybind11"
 PYBIND_INCLUDE_DIR="/usr/include/pybind11"
 
-rm $PYBIND_PKG_CONFIG
+# rm $PYBIND_PKG_CONFIG
 rm $PYBIND_SHARE_CMAKE/*.cmake
 rm -rf $PYBIND_INCLUDE_DIR
 
-pip3 install --upgrade pybind11[global]
+uv pip install --upgrade pybind11[global]
 
-PYTHON_ROOT="$(pip3 show pybind11 | grep Location: | cut -d' ' -f2)"
+PYTHON_ROOT="$(uv pip show pybind11 | grep Location: | cut -d' ' -f2)"
 PYBIND_ROOT="$PYTHON_ROOT/pybind11"
 
 cp $PYBIND_ROOT/share/pkgconfig/pybind11.pc $PYBIND_PKG_CONFIG

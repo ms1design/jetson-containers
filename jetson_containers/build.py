@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Container build system for managing package configurations and multi-stage build chains, with automated testing and dependency tracking. 
+# Container build system for managing package configurations and multi-stage build chains, with automated testing and dependency tracking.
 #
 # A "package" is composed of a Dockerfile, configs, and test scripts.  These are found under the jetson-containers/packages directory.
 # There are also "meta-packages" that have no Dockerfiles themselves, but specify a set of packages to include (e.g. l4t-pytorch)
@@ -12,28 +12,31 @@
 # Some example build scenarios:
 #
 #   $ jetson-containers/build.sh --name=xyz pytorch jupyterlab     # build container with PyTorch and JupyterLab server
-#   $ jetson-containers/build.sh --multiple pytorch tensorflow     # build separate containers for PyTorch and 
+#   $ jetson-containers/build.sh --multiple pytorch tensorflow     # build separate containers for PyTorch and
 #   $ jetson-containers/build.sh --multiple ros:humble*            # build all ROS Humble containers (can use wildcards)
-#   $ jetson-containers/build.sh ros:humble-desktop pytorch        # build ROS Humble with PyTorch on top 
+#   $ jetson-containers/build.sh ros:humble-desktop pytorch        # build ROS Humble with PyTorch on top
 #   $ jetson-containers/build.sh --base=xyz:latest pytorch         # add PyTorch to an existing container
 #
 # Typically the jetson-containers/build.sh wrapper script is used to launch this underlying Python module. jetson-containers can also
 # build external out-of-tree projects that have their own Dockerfile.  And you can add your own package search dirs for other packages.
 #
+import argparse
 import os
+import pprint
 import re
 import sys
-import pprint
-import argparse
 import traceback
 
 from jetson_containers import (
-    build_container, build_containers, find_packages, package_search_dirs, 
+    build_container, build_containers, find_packages, package_search_dirs,
     cprint, to_bool, log_config, log_error, log_status, log_versions, LogConfig
 )
+from jetson_containers.network import get_log_tail
+from jetson_containers.webhook import send_webhook
+from jetson_containers.logging import get_log_dir
 
 parser = argparse.ArgumentParser()
-                    
+
 parser.add_argument('packages', type=str, nargs='*', default=[], help='packages or containers to build (filterable by wildcards)')
 
 parser.add_argument('--name', type=str, default='', help="the name of the output container to build")
@@ -98,7 +101,7 @@ else:
 
 # add proxy to build args if flag is set
 if args.use_proxy:
-    proxy_vars = ['http_proxy', 'https_proxy', 'no_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY']
+    proxy_vars = ['all_proxy', 'http_proxy', 'https_proxy', 'no_proxy', 'ALL_PROXY', 'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY']
     for var in proxy_vars:
         if var in os.environ:
             args.build_args[var] = os.environ[var]
@@ -114,22 +117,80 @@ if args.list_packages or args.show_packages:
     if args.list_packages:
         for package in sorted(packages.keys()):
             print(package)
-    
+
     if args.show_packages:
         for key in sorted(packages.keys()):
             fmt = pprint.pformat(packages[key], indent=2)[1:-1].replace('\n', '\n  ')
             cprint(f"\n<b>> {key}</b>\n\n   {fmt}")
-        
+
     sys.exit(0)
-    
+
+# Initialize build status and error message
+build_status = 'success'
+build_error = None
+
 try:
     # build one multi-stage container from chain of packages
     # or launch multiple independent container builds
     if not args.multiple:
         build_container(**vars(args))
-    else:   
+    else:
         build_containers(**vars(args))
 except Exception as error:
+    build_status = 'failure'
+    build_error = str(error)
     log_error(f"Failed building:  {', '.join(args.packages)}\n\n{traceback.format_exc()}")
+    # exit non-zero so CI detects failure
+    sys.exit(1)
 finally:
+    # Send webhook notification
+    try:
+        if build_status == 'success':
+            message = f"Successfully built packages: {', '.join(args.packages)}"
+        else:
+            # For failures, include error message and last 10 lines of build log if available
+            message = f"Build failed for packages: {', '.join(args.packages)}"
+            if build_error:
+                message += f"\nError: {build_error}"
+
+            # Try to get the last 10 lines from the build log
+            try:
+                log_dir = get_log_dir()
+                # Look for common log file names in the log directory
+                potential_log_files = ['build.log', 'docker.log', 'container.log']
+                log_tail = ""
+
+                for log_name in potential_log_files:
+                    log_path = os.path.join(log_dir, log_name)
+                    log_tail = get_log_tail(log_path, 10)
+                    if log_tail:
+                        break
+
+                if log_tail:
+                    message += f"\n\nLast 10 lines from build log:\n{log_tail}"
+
+            except Exception as log_tail_error:
+                # Don't let log tail retrieval errors affect the main build process, but log the error for debugging
+                log_error(f"Failed to retrieve build log tail: {log_tail_error}\n\n{traceback.format_exc()}")
+
+        # Collect build command and environment variables for webhook
+        build_command = f"jetson-containers {' '.join(sys.argv[1:])}"
+
+        env_vars = {}
+        # Collect relevant environment variables
+        for env_var in ['CUDA_VERSION', 'LSB_RELEASE', 'PYTHON_VERSION']:
+            if env_var in os.environ:
+                env_vars[env_var] = os.environ[env_var]
+
+        # Select appropriate webhook URL based on build status
+        if build_status == 'success':
+            webhook_url = os.environ.get('JC_BUILD_SUCCESS_WEBHOOK_URL')
+        else:
+            webhook_url = os.environ.get('JC_BUILD_FAILURE_WEBHOOK_URL')
+
+        send_webhook(build_status, args.packages, message, build_command, env_vars, webhook_url)
+    except Exception as webhook_error:
+        # Don't let webhook errors affect the main build process, but log the error for debugging
+        log_error(f"Webhook notification failed: {webhook_error}\n\n{traceback.format_exc()}")
+
     log_status(done=True)

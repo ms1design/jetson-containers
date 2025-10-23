@@ -2,8 +2,8 @@
 set -ex
 
 if [ "$FORCE_BUILD" == "on" ]; then
-	echo "Forcing build of nerfacc ${NERFACC}"
+	echo "Forcing build of nerfacc ${NERFACC_VERSION}"
 	exit 1
 fi
 
-pip3 install nerfacc==${NERFACC_VERSION}
+uv pip install nerfacc==${NERFACC_VERSION}

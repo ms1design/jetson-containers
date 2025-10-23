@@ -2,18 +2,14 @@
 set -ex
 
 echo "Building CuPy ${CUPY_VERSION}"
-   
-git clone --branch ${CUPY_VERSION} --depth 1 --recursive https://github.com/cupy/cupy cupy
-cd cupy
 
-pip3 install fastrlock
-python3 setup.py bdist_wheel --verbose
-cp dist/cupy*.whl /opt
+git clone --branch ${CUPY_VERSION} --depth 1 --recursive https://github.com/cupy/cupy /opt/cupy
+cd /opt/cupy
 
-cd ../
-rm -rf cupy
+uv pip install fastrlock
+uv build --wheel --no-build-isolation -v --out-dir /opt/cupy/wheels/ .
+cp /opt/cupy/wheels/*.whl /opt
 
-pip3 install /opt/cupy*.whl
-pip3 show cupy && python3 -c 'import cupy; print(cupy.show_config())'
-
-twine upload --verbose /opt/cupy*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"
+uv pip install /opt/cupy/wheels/*.whl
+uv pip show cupy
+twine upload --verbose /opt/cupy/wheels/*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"

@@ -8,7 +8,7 @@ def vulkan_sdk(version, default=False):
 
   This will pull the same sources as the prebuilt SDK,
   and rebuild them from the current architecture.
-  Previous builds get cached on apt.jetson-ai-lab.dev
+  Previous builds get cached on apt.jetson-ai-lab.io
   """
   pkg = package.copy()
 
@@ -34,6 +34,7 @@ package = [
   vulkan_sdk('1.3.275'),
   vulkan_sdk('1.3.296'),
   vulkan_sdk('1.4.309'),
-  vulkan_sdk('1.4.313', default=True),
+  vulkan_sdk('1.4.313'),
   vulkan_sdk('1.4.314'),
+  vulkan_sdk('1.4.321', default=True),
 ]

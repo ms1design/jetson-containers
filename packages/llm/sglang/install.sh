@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
 set -ex
 
-if [ "$FORCE_BUILD" == "on" ]; then
-	echo "Forcing build of sglang ${SGLANG_VERSION}"
-	exit 1
-fi
-pip3 install \
+uv pip install \
   compressed-tensors \
   datasets \
   decord2 \
@@ -23,7 +19,7 @@ pip3 install \
   "prometheus-client>=0.20.0" \
   psutil \
   pydantic \
-  pynvml \
+  nvidia-ml-py \
   python-multipart \
   "pyzmq>=25.1.2" \
   "soundfile>=0.13.1" \
@@ -34,7 +30,15 @@ pip3 install \
   "anthropic" \
   "msgspec" \
   orjson \
-  litellm
+  litellm \
+  pybase64 \
+  fastapi \
+  outlines
 
-pip3 install sgl-kernel "sglang[all]~=${SGLANG_VERSION}" || \
-pip3 install sgl-kernel "sglang[all]~=${SGLANG_VERSION_SPEC}"
+if [ "$FORCE_BUILD" == "on" ]; then
+	echo "Forcing build of sglang ${SGLANG_VERSION}"
+	exit 1
+fi
+
+uv pip install sgl-kernel "sglang[all]~=${SGLANG_VERSION}" || \
+uv pip install sgl-kernel "sglang[all]~=${SGLANG_VERSION_SPEC}"

@@ -1,12 +1,10 @@
 import os
 
-from jetson_containers import JETPACK_VERSION, nv_tegra_release
+from jetson_containers import JETPACK_VERSION, nv_tegra_release, IS_SBSA, CUDA_VERSION
 
-nv_tegra_release( # ollama uses /etc/nv_tegra_release
-    dst=os.path.join(package['path'], 'nv_tegra_release')
-)
+PKG_DIR = os.path.dirname(__file__)
+nv_tegra_release(dst=os.path.join(PKG_DIR, 'nv_tegra_release'))
 
-# grammer
 def ollama(version, default=False):
     pkg = package.copy()
 
@@ -15,6 +13,8 @@ def ollama(version, default=False):
     pkg['build_args'] = {
         'OLLAMA_VERSION': version,
         'JETPACK_VERSION_MAJOR': JETPACK_VERSION.major,
+        'IS_SBSA': IS_SBSA,
+        'CUDA_VERSION_MAJOR': CUDA_VERSION.major,
     }
 
     if default:
@@ -27,10 +27,5 @@ package = [
     ollama('0.4.0'),
     ollama('0.5.1'),
     ollama('0.5.5'), #, branch='0.5.5-rc0'),
-    ollama('0.5.7'),
-    ollama('0.6.7'),
-    ollama('0.7.0'),
-    ollama('0.8.0'),
-    ollama('0.9.6', default=True),
-    ollama('0.10.0')
+    ollama('0.12.6', default=True)
 ]

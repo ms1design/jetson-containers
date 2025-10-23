@@ -2,7 +2,7 @@
 # wyoming-whisper
 set -ex
 
-pip3 install -U \
+uv pip install -U \
    build \
    wheel
 
@@ -14,14 +14,14 @@ sed -i \
    -e 's|"faster-whisper.*"||g' \
    pyproject.toml
 
-python -m build --wheel --outdir $PIP_WHEEL_DIR
+python3 -m build --wheel --outdir $PIP_WHEEL_DIR
 
 cd /
 rm -rf /tmp/wyoming-faster-whisper
 
-pip3 install $PIP_WHEEL_DIR/wyoming_faster_whisper*.whl
+uv pip install $PIP_WHEEL_DIR/wyoming_faster_whisper*.whl
 
-pip3 show wyoming_faster_whisper
+uv pip show wyoming_faster_whisper
 python3 -c 'import wyoming_faster_whisper; print(wyoming_faster_whisper.__version__);'
 
 twine upload --verbose $PIP_WHEEL_DIR/wyoming_faster_whisper*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"

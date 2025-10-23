@@ -1,18 +1,19 @@
 
-from jetson_containers import L4T_VERSION, update_dependencies
+from jetson_containers import L4T_VERSION, update_dependencies, CUDA_ARCHITECTURES
 
 def mlc(commit, patch=None, version='0.1', tvm='0.15', llvm=17, depends=[], requires=None, default=False):
     pkg = package.copy()
-  
+
     if default:
         pkg['alias'] = 'mlc'
-        
+
     if requires:
         pkg['requires'] = requires
 
     pkg['name'] = f'mlc:{version}'
     pkg['notes'] = f"[mlc-ai/mlc-llm](https://github.com/mlc-ai/mlc-llm/tree/{commit}) commit SHA [`{commit}`](https://github.com/mlc-ai/mlc-llm/tree/{commit})"
-    pkg['depends'] = update_dependencies(pkg['depends'], [f'llvm:{llvm}', *depends])
+    # Ensure TVM is a dependency so TVM_HOME=/opt/tvm is available during MLC build
+    pkg['depends'] = update_dependencies(pkg['depends'], [f'llvm:{llvm}', 'tvm', *depends])
 
     pkg['build_args'] = {
         'MLC_VERSION': version,
@@ -20,9 +21,9 @@ def mlc(commit, patch=None, version='0.1', tvm='0.15', llvm=17, depends=[], requ
         'MLC_PATCH': patch,
         'TVM_VERSION': tvm,
     }
-    
+
     builder = pkg.copy()
-    
+
     builder['name'] = f'mlc:{version}-builder'
     builder['build_args'] = {**pkg['build_args'], **{'FORCE_BUILD': 'on'}}
 
@@ -36,5 +37,5 @@ package = [
     mlc('6da6aca', 'patches/6da6aca.diff', version='0.1.3', tvm='0.18.1', requires='>=36'),  # 10/18/2024
     mlc('385cef2', 'patches/385cef2.diff', version='0.1.4', tvm='0.19.0', requires='>=36'),  # 12/14/2024
     mlc('cf7ae82', 'patches/cf7ae82.diff', version='0.19.0', tvm='0.19.0', requires='>=36'), # 01/09/2025
-    mlc('d2118b3', 'patches/d2118b3.diff', version='0.20.0', tvm='0.20.0', requires='>=36', depends=['flashinfer:0.2.6.post1'], default=(L4T_VERSION.major >= 36)), # 5/1/2025
+    mlc('bad02b4', 'patches/empty.diff', version='0.20.0', tvm='0.22.0', requires='>=36', depends=['tvm', 'flashinfer'], default=True), # 5/1/2025
 ]

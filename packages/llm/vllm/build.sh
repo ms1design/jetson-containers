@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -ex
 
-pip3 install pre-commit nanobind==2.5.0
+uv pip install pre-commit nanobind==2.5.0
 # Clone the repository if it doesn't exist
-git clone --branch=${VLLM_BRANCH} --recursive --depth=1 https://github.com/vllm-project/vllm /opt/vllm || 
+git clone --branch=${VLLM_BRANCH} --recursive --depth=1 https://github.com/vllm-project/vllm /opt/vllm ||
 git clone --recursive --depth=1 https://github.com/vllm-project/vllm /opt/vllm
 
 cd /opt/vllm
@@ -12,21 +12,21 @@ env
 # cp /tmp/vllm/${VLLM_VERSION}.fa.diff /tmp/vllm/fa.diff
 # git apply /tmp/vllm/${VLLM_VERSION}.diff
 
-if [[ -z "${IS_SBSA}" || "${IS_SBSA}" == "0" || "${IS_SBSA,,}" == "false" ]]; then
-  echo "Applying vLLM CMake patches…"
-  python3 /tmp/vllm/generate_diff.py                      # (re)generate the .diff files
-  git apply -p1 /tmp/vllm/CMakeLists.txt.diff             # patch CMakeLists.txt
-  git apply -p1 /tmp/vllm/vllm_flash_attn.cmake.diff      # patch vllm_flash_attn.cmake
-else
-  echo "SBSA build detected (IS_SBSA=${IS_SBSA}); skipping patch application."
+echo "Applying vLLM CMake patches…"
+if [[ -z "${IS_SBSA}" || "${IS_SBSA}" == "1" || "${IS_SBSA,,}" == "true" ]]; then
+  git apply -p1 /tmp/vllm/0.10.2.diff || echo "patch already applied"
 fi
-
 # File "/opt/venv/lib/python3.12/site-packages/gguf/gguf_reader.py"
 # `newbyteorder` was removed from the ndarray class in NumPy 2.0
-sed -i 's|gguf.*|gguf|g' requirements/common.txt
+sed -i \
+  -e 's|^gguf.*|gguf|g' \
+  -e 's|^opencv-python-headless.*||g' \
+  -e 's|^mistral_common.*|mistral_common|g' \
+  requirements/common.txt
+
 grep gguf requirements/common.txt
 
-export MAX_JOBS=$(nproc) # this is for AGX (max 4 working on Orin NX)
+
 export USE_CUDNN=1
 export VERBOSE=1
 export CUDA_HOME=/usr/local/cuda
@@ -36,13 +36,23 @@ export DG_JIT_USE_NVRTC=1 # DeepGEMM now supports NVRTC with up to 10x compilati
 
 python3 use_existing_torch.py || echo "skipping vllm/use_existing_torch.py"
 
-pip3 install -r requirements/build.txt -v
+uv pip install -r requirements/build.txt -v
 python3 -m setuptools_scm
-pip3 wheel --no-build-isolation -v --wheel-dir=/opt/vllm/wheels .
-pip3 install /opt/vllm/wheels/vllm*.whl
+
+ARCH=$(uname -i)
+if [ "${ARCH}" = "aarch64" ]; then
+      export NVCC_THREADS=1
+      export CUDA_NVCC_FLAGS="-Xcudafe --threads=1"
+      export MAKEFLAGS='-j2'
+      export CMAKE_BUILD_PARALLEL_LEVEL=$MAX_JOBS
+      export NINJAFLAGS='-j2'
+fi
+
+uv build --wheel --no-build-isolation -v --out-dir /opt/vllm/wheels .
+uv pip install /opt/vllm/wheels/vllm*.whl
 
 cd /opt/vllm
-pip3 install compressed-tensors
+uv pip install compressed-tensors
 
 # Optionally upload to a repository using Twine
 twine upload --verbose /opt/vllm/wheels/vllm*.whl || echo "Failed to upload wheel to ${TWINE_REPOSITORY_URL}"

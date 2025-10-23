@@ -63,7 +63,7 @@ jetson-containers build --base=my_container:latest --name=my_container:pytorch p
 Many packages are versioned, and define subpackages like `pytorch:2.5`, `pytorch:2.6`, ect in the package's [configuration](/docs/packages.md#python).  For some core packages, you can control the default version of these with environment variables like `CUDA_VERSION`, `PYTORCH_VERSION`, `PYTHON_VERSION`, and `LSB_RELEASE` for the Ubuntu distro.  Other packages referring to these will then use your desired versions instead of the previous ones:
 
 ```bash
-LSB_RELEASE=24.04 CUDA_VERSION=12.9 jetson-containers build --name=cu129 pytorch  # build PyTorch for Ubuntu 24.04 + CUDA 12.9
+LSB_RELEASE=24.04 CUDA_VERSION=13.0 jetson-containers build --name=cu129 pytorch  # build PyTorch for Ubuntu 24.04 + CUDA 13.0
 ```
 
 The dependencies are also able to specify with [`requires`](/docs/packages.md) which versions of L4T, CUDA, and Python they need, so changing the CUDA version has cascading effects downstream and will also change the default version of cuDNN, TensorRT, and PyTorch (similar to how changing the PyTorch version also changes the default version of torchvision and torchaudio).  The reverse also occurs in the other direction, for example changing the TensorRT version will change the default version of CUDA (unless you explicitly specify it otherwise).
@@ -140,7 +140,7 @@ Robotics, edge AI, computer vision, and IoT solutions using CUDA at the edge.
 Using these together, you can rebuild the container stack for the specific version combination that you want:
 
 ```bash
-LSB_RELEASE=24.04 CUDA_VERSION=12.9 PYTHON_VERSION=3.12 PYTORCH_VERSION=2.8 jetson-containers build vllm
+LSB_RELEASE=24.04 CUDA_VERSION=13.0 PYTHON_VERSION=3.12 PYTORCH_VERSION=2.8 jetson-containers build vllm
 ```
 
 
@@ -161,7 +161,7 @@ For packages that provide different versions but don't have their own environmen
 Here is a list of containers currently built for Ubuntu 24.04 with the following environment:
 
 * `LSB_RELEASE=24.04 L4T_VERSION=36.4.4`
-* `CUDA_VERSION=12.9 CUDNN_VERSION=9.10`
+* `CUDA_VERSION=13.0 CUDNN_VERSION=9.10`
 * `PYTHON_VERSION=3.12 PYTORCH_VERSION=2.8`
 
 | Repo           | Version   | Image                                             |  Size (GB)  | Timestamp   |
@@ -198,13 +198,13 @@ You can build or run these from JetPack 6.1+ like the following:
 
 ## Pip Server
 
-Being able to change the versions of CUDA, Python, ect in the build tree will cause all the dependant packages like PyTorch to need rebuilt, and this can be time-consuming to recompile everything from scratch.  In order to cache and re-use the Python wheels compiled during the container builds, there's a [pip server](http://pypi.jetson-ai-lab.dev) running that wheels are uploaded to.  The containers automatically use this pip server via the `PIP_INDEX_URL` environment variable that gets set in the base containers, and there are indexes created for different versions of JetPack/CUDA.
+Being able to change the versions of CUDA, Python, ect in the build tree will cause all the dependant packages like PyTorch to need rebuilt, and this can be time-consuming to recompile everything from scratch.  In order to cache and re-use the Python wheels compiled during the container builds, there's a [pip server](http://pypi.jetson-ai-lab.io) running that wheels are uploaded to.  The containers automatically use this pip server via the `PIP_INDEX_URL` environment variable that gets set in the base containers, and there are indexes created for different versions of JetPack/CUDA.
 
-Then when the containers are built, it will first attempt to install the wheel from the server, and if it's found it builds it from source.  There is another similar server run for caching [tarball releases](http://pypi.jetson-ai-lab.dev:8000) for projects that install C/C++ binaries and headers or other general files outside of pip.  See this [forum post](https://forums.developer.nvidia.com/t/jetson-ai-lab-ml-devops-containers-core-inferencing/288235/3) for more information about the caching infrastructure, and the ability to use the pip server outside of just containers.
+Then when the containers are built, it will first attempt to install the wheel from the server, and if it's found it builds it from source.  There is another similar server run for caching [tarball releases](http://pypi.jetson-ai-lab.io:8000) for projects that install C/C++ binaries and headers or other general files outside of pip.  See this [forum post](https://forums.developer.nvidia.com/t/jetson-ai-lab-ml-devops-containers-core-inferencing/288235/3) for more information about the caching infrastructure, and the ability to use the pip server outside of just containers.
 
 ### Local `PIP` and `APT` servers
 
-You can start the local `PYPI`/`APT` servers on one Jetson node with a fallback set to `jetson-ai-lab.dev`. The local builded `pip` wheels and `tarballs` will be uploaded from the container during build time to local `PYPI`/`APT` instances only.
+You can start the local `PYPI`/`APT` servers on one Jetson node with a fallback set to `jetson-ai-lab.io`. The local builded `pip` wheels and `tarballs` will be uploaded from the container during build time to local `PYPI`/`APT` instances only.
 
 To start local `pypi`/`apt` servers:
 ```bash
@@ -223,7 +223,7 @@ git clone --recursive https://github.com/dusty-nv/jetson-containers.git
 sudo bash jetson-containers/install.sh
 cd jetson-containers
 # modify here your .env for example: 
-INDEX_HOST=jetson-ai-lab.dev
+INDEX_HOST=jetson-ai-lab.io
 # activate it
 source .env
 # Then you can build with your variables

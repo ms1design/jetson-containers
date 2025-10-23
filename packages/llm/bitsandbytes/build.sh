@@ -3,19 +3,19 @@ set -ex
 
 echo " ================ Building bitsandbytes ${BITSANDBYTES_VERSION} ================"
 
-echo "### CUDA_INSTALLED_VERSION: $CUDA_INSTALLED_VERSION" 
-echo "### CUDA_MAKE_LIB: $CUDA_MAKE_LIB" 
-pip3 uninstall -y bitsandbytes || echo "previous bitsandbytes installation not found"
+echo "### CUDA_INSTALLED_VERSION: $CUDA_INSTALLED_VERSION"
+echo "### CUDA_MAKE_LIB: $CUDA_MAKE_LIB"
+uv pip uninstall bitsandbytes || echo "previous bitsandbytes installation not found"
 
 git clone --branch=$BITSANDBYTES_BRANCH --recursive --depth=1 "https://github.com/$BITSANDBYTES_REPO" /opt/bitsandbytes || \
 git clone --recursive --depth=1 "https://github.com/$BITSANDBYTES_REPO" /opt/bitsandbytes
 cd /opt/bitsandbytes
-
+build_capability="80;90;100;110;120"
 if [ $CUDA_INSTALLED_VERSION < 126 ]; then
     CUDA_VERSION=$CUDA_INSTALLED_VERSION make -C /opt/bitsandbytes -j$(nproc) "${CUDA_MAKE_LIB}"
     CUDA_VERSION=$CUDA_INSTALLED_VERSION make -C /opt/bitsandbytes -j$(nproc) "${CUDA_MAKE_LIB}_nomatmul"
 else
-    cmake -DCOMPUTE_BACKEND=cuda -S .
+    cmake -DCOMPUTE_BACKEND=cuda -DCOMPUTE_CAPABILITY="${build_capability}" -S .
     CUDA_VERSION=$CUDA_INSTALLED_VERSION make -C . -j$(nproc)
 fi
 
@@ -23,7 +23,7 @@ python3 setup.py --verbose build_ext --inplace -j$(nproc) bdist_wheel --dist-dir
 
 ls -l $PIP_WHEEL_DIR
 
-pip3 install scipy 
-pip3 install $PIP_WHEEL_DIR/bitsandbytes*.whl
+uv pip install scipy
+uv pip install $PIP_WHEEL_DIR/bitsandbytes*.whl
 
 twine upload --verbose $PIP_WHEEL_DIR/bitsandbytes*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"

@@ -2,8 +2,8 @@
 set -ex
 
 # Clone the repository if it doesn't exist
-git clone --branch=v${MAMBA_VERSION} --depth=1 --recursive https://github.com/johnnynunez/mamba /opt/mamba  || \
-git clone --depth=1 --recursive https://github.com/johnnynunez/mamba  /opt/mamba
+git clone --branch=v${MAMBA_VERSION} --depth=1 --recursive https://github.com/state-spaces/mamba /opt/mamba  || \
+git clone --depth=1 --recursive https://github.com/state-spaces/mamba  /opt/mamba
 
 # Navigate to the directory containing mamba's setup.py
 cd /opt/mamba
@@ -21,7 +21,7 @@ MAX_JOBS="$(nproc)" \
 MAMBA_FORCE_BUILD="TRUE" \
 MAMBA_SKIP_CUDA_BUILD="FALSE" \
 python3 setup.py bdist_wheel --dist-dir=/opt/mamba/wheels
-pip3 install /opt/mamba/wheels/mamba*.whl
+uv pip install /opt/mamba/wheels/mamba*.whl
 
 cd /opt/mamba
 

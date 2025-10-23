@@ -11,20 +11,25 @@ cd /opt/xformers
 if [[ -z "${IS_SBSA}" || "${IS_SBSA}" == "0" || "${IS_SBSA,,}" == "false" ]]; then
     export MAX_JOBS=6
 else
-    export MAX_JOBS="$(nproc)"
+    export MAX_JOBS=16
 fi
-export CMAKE_BUILD_PARALLEL_LEVEL=$MAX_JOBS
-export NVCC_THREADS=$MAX_JOBS
-echo "Building with MAX_JOBS=$MAX_JOBS and CMAKE_BUILD_PARALLEL_LEVEL=$CMAKE_BUILD_PARALLEL_LEVEL"
+ARCH=$(uname -i)
+if [ "${ARCH}" = "aarch64" ]; then
+      export NVCC_THREADS=1
+      export CUDA_NVCC_FLAGS="-Xcudafe --threads=1"
+      export MAKEFLAGS='-j2'
+      export CMAKE_BUILD_PARALLEL_LEVEL=$MAX_JOBS
+      export NINJAFLAGS='-j2'
+fi
+
+echo "Building with MAX_JOBS=$MAX_JOBS and CMAKE_BUILD_PARALLEL_LEVEL=$MAX_JOBS"
 
 MAX_JOBS=$MAX_JOBS \
 CMAKE_BUILD_PARALLEL_LEVEL=$MAX_JOBS \
-FLASH_ATTENTION_FORCE_BUILD=1 \
-FLASH_ATTENTION_FORCE_CXX11_ABI=0 \
-FLASH_ATTENTION_SKIP_CUDA_BUILD=0 \
+XFORMERS_DISABLE_FLASH_ATTN=1 \
 XFORMERS_MORE_DETAILS=1 \
 python3 setup.py --verbose bdist_wheel --dist-dir /opt/xformers/wheels
 
-pip3 install /opt/xformers/wheels/*.whl
+uv pip install /opt/xformers/wheels/*.whl
 
 twine upload --verbose /opt/xformers/wheels/xformers*.whl || echo "failed to upload wheel to ${TWINE_REPOSITORY_URL}"

@@ -130,7 +130,7 @@ assign_nvme_drive() {
 # Configure Docker runtime
 setup_docker_runtime() {
     local daemon_json="/etc/docker/daemon.json"
-    local dateFileVersionFormat = $(date +"%Y%m%d%H%M%S")
+    local dateFileVersionFormat=$(date +"%Y%m%d%H%M%S")
     local daemon_json_backup="${daemon_json}.${dateFileVersionFormat}.bak"
 
     if grep -q '"default-runtime": "nvidia"' "$daemon_json"; then
@@ -390,6 +390,9 @@ parse_args() {
 # Check if specific tests are provided
 if [ ${#TESTS[@]} -ne 0 ]; then
     execution_mode="specific"
+elif [ "${interactive_mode}" = "false" ]; then
+    # non‑interactive mode: run all
+    execution_mode="all"
 else
     ask_execution_mode
 fi
@@ -429,7 +432,7 @@ main() {
     echo "============================="
 
     # NVMe Setup
-    if [ "$nvme_should_run" = "yes" ] || [ "$nvme_should_run" = "ask" -a "$interactive_mode" = "true" ] && ask_yes_no "Configure NVMe drive?"; then
+    if [ "$nvme_should_run" = "yes" ] || ([ "$nvme_should_run" = "ask" -a "$interactive_mode" = "true" ] && ask_yes_no "Configure NVMe drive?"); then
         if ! $SCRIPT_DIR/probe-system.sh --quiet --tests="nvme_mount"; then
             assign_nvme_drive
             $SCRIPT_DIR/probe-system.sh --quiet --tests="nvme_mount"
@@ -439,7 +442,7 @@ main() {
     fi
 
     # Docker Runtime Setup
-    if [ "$docker_runtime_should_run" = "yes" ] || [ "$docker_runtime_should_run" = "ask" -a "$interactive_mode" = "true" ] && ask_yes_no "Configure Docker runtime?"; then
+    if [ "$docker_runtime_should_run" = "yes" ] || ([ "$docker_runtime_should_run" = "ask" -a "$interactive_mode" = "true" ] && ask_yes_no "Configure Docker runtime?"); then
         if ! $SCRIPT_DIR/probe-system.sh --quiet --tests="docker_runtime"; then
             setup_docker_runtime
             $SCRIPT_DIR/probe-system.sh --quiet --tests="docker_runtime"
@@ -449,7 +452,7 @@ main() {
     fi
 
     # Docker Root Setup
-    if [ "$docker_root_should_run" = "yes" ] || [ "$docker_root_should_run" = "ask" -a "$interactive_mode" = "true" ] && ask_yes_no "Configure Docker root?"; then
+    if [ "$docker_root_should_run" = "yes" ] || ([ "$docker_root_should_run" = "ask" -a "$interactive_mode" = "true" ] && ask_yes_no "Configure Docker root?"); then
         if ! $SCRIPT_DIR/probe-system.sh --quiet --tests="docker_root"; then
             setup_docker_root
             $SCRIPT_DIR/probe-system.sh --quiet --tests="docker_root"
@@ -459,7 +462,7 @@ main() {
     fi
 
     # Swap Setup
-    if [ "$swap_should_run" = "yes" ] || [ "$swap_should_run" = "ask" -a "$interactive_mode" = "true" ] && ask_yes_no "Configure swap?"; then
+    if [ "$swap_should_run" = "yes" ] || ([ "$swap_should_run" = "ask" -a "$interactive_mode" = "true" ] && ask_yes_no "Configure swap?"); then
         if ! $SCRIPT_DIR/probe-system.sh --quiet --tests="swap_file"; then
             setup_swap_file
             $SCRIPT_DIR/probe-system.sh --quiet --tests="swap_file"

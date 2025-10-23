@@ -2,7 +2,7 @@
 # name: llama_cpp
 # group: llm
 # config: config.py
-# depends: [cuda, cudnn, cmake, python, numpy, huggingface_hub, sudonim]
+# depends: [cuda, cudastack:standard, cmake, python, numpy, huggingface_hub, sudonim]
 # requires: '>=34.1.0'
 # test: test_version.py
 # docs: docs.md
@@ -15,7 +15,8 @@ ARG LLAMA_CPP_VERSION \
     LLAMA_CPP_BRANCH \
     LLAMA_CPP_BRANCH_PY \
     LLAMA_CPP_FLAGS \
-    FORCE_BUILD=off \ 
+    CUDA_ARCHITECTURES \
+    FORCE_BUILD=off \
     SOURCE_DIR=/opt/llama_cpp_python \
     TMP=/tmp/llama_cpp
 
